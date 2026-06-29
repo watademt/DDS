@@ -1,0 +1,85 @@
+{% extends 'tracker/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-5">
+            <div class="card-header bg-dark text-white">
+                <h4 class="mb-0">{% if object %}Редактирование{% else %}Новая запись ДДС{% endif %}</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                        <div class="alert alert-danger">
+                            Ошибки заполнения формы. Проверьте правильность выбранных категорий.
+                        </div>
+                    {% endif %}
+
+                    {{ form.as_p }}
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'transaction_list' %}" class="btn btn-secondary">Отмена</a>
+                        <button type="submit" class="btn btn-primary">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Django присваивает полям формы ID формата "id_имяполя"
+    const typeSelect = document.getElementById('id_type');
+    const categorySelect = document.getElementById('id_category');
+    const subcategorySelect = document.getElementById('id_subcategory');
+
+    // Функция обновления опций в select
+    function populateSelect(selectElement, data, placeholder) {
+        selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+        data.forEach(item => {
+            selectElement.innerHTML += `<option value="${item.id}">${item.name}</option>`;
+        });
+    }
+
+    if (typeSelect && categorySelect && subcategorySelect) {
+        // Слушатель на изменение "Типа"
+        typeSelect.addEventListener('change', function() {
+            const typeId = this.value;
+
+            // Сбрасываем зависимые селекты
+            categorySelect.innerHTML = '<option value="">---------</option>';
+            subcategorySelect.innerHTML = '<option value="">---------</option>';
+
+            if (typeId) {
+                // Обращение к эндпоинту DRF
+                fetch(`/api/categories/${typeId}/`)
+                    .then(response => response.json())
+                    .then(data => populateSelect(categorySelect, data, 'Выберите категорию'))
+                    .catch(error => console.error('Ошибка загрузки категорий:', error));
+            }
+        });
+
+        // Слушатель на изменение "Категории"
+        categorySelect.addEventListener('change', function() {
+            const categoryId = this.value;
+
+            // Сбрасываем подкатегорию
+            subcategorySelect.innerHTML = '<option value="">---------</option>';
+
+            if (categoryId) {
+                // Обращение к эндпоинту DRF
+                fetch(`/api/subcategories/${categoryId}/`)
+                    .then(response => response.json())
+                    .then(data => populateSelect(subcategorySelect, data, 'Выберите подкатегорию'))
+                    .catch(error => console.error('Ошибка загрузки подкатегорий:', error));
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
